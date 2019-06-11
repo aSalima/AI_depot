@@ -34,18 +34,22 @@ def addDataTraining(trainingData, doc):
     trainingData.append(doc)
     return trainingData
 
-file = 'mantisTest.csv'
+file = 'mantisTest3.csv'
 fileBis = os.path.splitext(file)[0]+'Bis.csv'
+print('fileBis', fileBis)
 
 ###################################################################
 ################ RECUPERATION DES DONNEES MYSQL ###################
 ###################################################################
+'''
 query = 'SELECT id, summary FROM mantis_local.mantis_bug_table limit 10000;'
 lines = ed.connMySql(cs.serverMySql, cs.databaseMySql, cs.usernameMySql, cs.passwordMySql, query)
 #print('lines', lines)
+
 file = 'mantisTest.csv'
 fileBis = os.path.splitext(file)[0]+'Bis.csv'
 ed.mySqlToCsv(lines, file)  # MySql --> CSV #
+'''
 cl.clean_file(file)         # Traitement des données récuperées #
 
 ###################################################################
@@ -56,9 +60,11 @@ with open(fileBis, 'r') as File:
     csvReader = csv.reader(File, delimiter=',')
     for row in csvReader:
             if row != []:
-                data = cl.text_process(row[1])
+                #data = cl.text_process(row[1])
+                data = cl.text_tTagger(row[1])
                 trainingData.append(data)
-    #print('trainingData', trainingData)
+    print('trainingData', trainingData)
+    nbDocs = len(trainingData)
 
 ###################################################################
 #################### ENTRAINEMENT DU MODELE #######################
@@ -129,7 +135,8 @@ def document_vector(word2vec_model, trainingData, doc):
 
 myDoc = input("Entrez un mantis : ")
 #print('myDoc1', myDoc)
-myDoc = cl.text_process(myDoc)
+#myDoc = cl.text_process(myDoc)
+myDoc = cl.del_stopwords(cl.text_tTagger(cl.text_cleaning(myDoc)))
 print('myDoc2', myDoc)
 model = newModel(model, trainingData, myDoc)
 myDocVec = np.mean(model[myDoc], axis=0)
@@ -145,15 +152,15 @@ print('corpusVec', corpusVec)
 
 sims = []
 maxSim = 0
-if myDoc in trainingData:
-    for i in range(0, len(corpusVec)-1):
+if nbDocs == len(trainingData):#myDoc in trainingData:
+    for i in range(0, len(corpusVec)):
         sim = cosine_similarity([myDocVec, corpusVec[i]])
         sims.append(sim[0][1])
         if (sim[0][1]) > maxSim:
             maxSim = sim[0][1]
             rang = i
 else:
-    for i in range(0, len(corpusVec)):
+    for i in range(0, len(corpusVec)-1):
         sim = cosine_similarity([myDocVec, corpusVec[i]])
         sims.append(sim[0][1])
         if (sim[0][1]) > maxSim:
@@ -165,12 +172,8 @@ maxSim2 = max(sims)
 
 print('maxSim 1', maxSim, rang)
 print('maxSim 2', maxSim2)
-print('le doc le plus similaire est: ', lines[rang][0], trainingData[rang])
-
-
-
-
-
+#print('le doc le plus similaire est: ', lines[rang][0], trainingData[rang])
+print('le doc le plus similaire est: ', trainingData[rang])
 '''
 sims = cosine_similarity(np.array(np.mean(model[doc], axis=0) for doc in trainingData))
 print('sims', sims)
